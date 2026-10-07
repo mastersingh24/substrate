@@ -10,7 +10,7 @@ this source on 2026-10-06, with images built by ko.
   - `storageClassName: dynamic-rwo`. Without it the claim gets `standard-rwo`
     (pd-balanced), which can't attach to the C4 nodes the cluster autoscaler
     creates: `Error 400: pd-balanced disk type cannot be used by c4-highcpu-4
-    machine type`. Reported upstream; see the issue linked from this branch.
+    machine type`. Reported upstream as agent-substrate/substrate#2298.
   - `nodeSelector: cloud.google.com/compute-class: n4-preferred`. Postgres
     requests 2 CPU, which the default pool's e2-medium nodes can't fit. This
     one is specific to this cluster and isn't proposed upstream.
