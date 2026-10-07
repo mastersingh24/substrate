@@ -1052,6 +1052,10 @@ spec:
         app: atenet-egress
     spec:
       serviceAccountName: atenet-egress
+      # agent-substrate cluster: the sdsmint sidecar requests 200m CPU / 512Mi,
+      # which the default pool's e2-medium nodes cannot fit.
+      nodeSelector:
+        cloud.google.com/compute-class: n4-preferred
       # sdsmint and envoy containers must share a UID: sdsmint creates the SDS socket mode
       # 0600, and Envoy has to be able to open it. The stock Envoy image runs as
       # UID 101 and ko's distroless base as 65532, so left alone they would not
