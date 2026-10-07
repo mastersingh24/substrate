@@ -101,6 +101,11 @@ spec:
       labels:
         app: postgres
     spec:
+      # agent-substrate cluster: the default pool's e2-medium nodes cannot fit
+      # postgres's 2 CPU request; let the n4-preferred compute class provision
+      # a node for it.
+      nodeSelector:
+        cloud.google.com/compute-class: n4-preferred
       securityContext:
         # Group ownership of the projected certificate below, and of the data
         # volume so that a freshly provisioned one is writable. OnRootMismatch
@@ -244,6 +249,9 @@ spec:
       name: data
     spec:
       accessModes: [ "ReadWriteOnce" ]
+      # agent-substrate cluster: the default standard-rwo (pd-balanced) cannot
+      # attach to C4/N4 nodes; dynamic-rwo picks a disk type the node supports.
+      storageClassName: dynamic-rwo
       resources:
         requests:
           # Headroom so WAL churn cannot fill the volume: a full pg_wal is a

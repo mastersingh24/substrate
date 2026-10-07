@@ -1,0 +1,17 @@
+# Egress is default-deny per actor on v0.3.0, and ax does not create policies
+# (google/ax#449). Apply one per actor after ax has created it:
+#
+#   kubectl ate --context agent-substrate create egress-policy <task-name> -a default -f egress-policy-example.yaml
+#
+# Use https rules: v0.3.0 accepts tlsPassthrough rules but the gateway ignores
+# them (fixed on main in 6c75a41f). The gateway caches policies for 10s.
+metadata:
+  atespace: default
+  name: default
+rules:
+  - https:
+      hostnames:
+        - www.google.com
+        - generativelanguage.googleapis.com
+      ports:
+        numbers: [443]

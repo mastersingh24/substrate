@@ -1,0 +1,22 @@
+# Worker pool used by ax on the agent-substrate cluster.
+#
+# gVisor snapshots only restore on the same CPU feature set, and E2 machines mix
+# AMD and Intel hosts, so every worker sits on one node. workerImage is the
+# ateom-gvisor digest printed by `install.sh publish worker-images`.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ax-workers
+---
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: ax-pool
+  namespace: ax-workers
+spec:
+  replicas: 3
+  workerImage: us-central1-docker.pkg.dev/gke-demos-345619/ax/substrate/ateom-gvisor@sha256:38cdd65b437fd4f162f25da1509935072856df2521d7fdda17a11782186b703a
+  template:
+    nodeSelector:
+      kubernetes.io/hostname: gke-agent-substrate-default-pool-447e9856-6v23
+      ate.dev/substrate-version: v0.3.0-dirty
