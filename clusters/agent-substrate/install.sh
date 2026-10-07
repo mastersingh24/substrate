@@ -20,8 +20,12 @@ export KUBECTL_CONTEXT=agent-substrate
 export BUCKET_NAME=ate-snapshots-gke-demos-345619-agent-substrate-us-central1
 export KO_DOCKER_REPO=us-central1-docker.pkg.dev/gke-demos-345619/ax/substrate
 export KO_DEFAULTPLATFORMS=linux/amd64
-# The default Envoy egress dataplane did not forward allowed TLS on v0.3.0.
-export ATE_ATENET_DATAPLANE=agentgateway
+# The default Envoy egress dataplane did not forward passthrough TLS on v0.3.0,
+# so agentgateway is the default here. Credential injection needs Envoy plus
+# sdsmint; for that, run with:
+#   ATE_ATENET_DATAPLANE=envoy ATE_EXPERIMENTAL_USE_SDSMINT=true \
+#   ATE_CREDENTIAL_INJECTION_ENABLED=true install.sh deploy atenet
+export ATE_ATENET_DATAPLANE="${ATE_ATENET_DATAPLANE:-agentgateway}"
 # The cluster's nodes, atelet DaemonSet and WorkerPool pin carry this label from
 # the first install. Keep it, or ate-setup starts a second atelet next to the first.
 export VERSION="${VERSION:-v0.3.0-dirty}"
