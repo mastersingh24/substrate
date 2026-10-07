@@ -35,6 +35,29 @@ as in a rolling upgrade.
   ate-api-server and atelet already have `objectAdmin` and `bucketViewer` on it.
 - Egress dataplane: `agentgateway`.
 
+## Credential injection (keeps model keys out of actors)
+
+Working on this cluster since 2026-10-07. The egress gateway swaps a
+placeholder header for the real key, so the key is never in the ActorTemplate,
+the sandbox or its snapshots.
+
+- **Gateway:** `ATE_ATENET_DATAPLANE=envoy ATE_EXPERIMENTAL_USE_SDSMINT=true
+  ATE_CREDENTIAL_INJECTION_ENABLED=true install.sh deploy atenet`. The sdsmint
+  gateway is scheduled on the `n4-preferred` compute class (its sidecar doesn't
+  fit e2-medium).
+- **Provider:** `manifests/egress-credential-injection/k8s-credential-provider.yaml`
+  (built with ko), plus a namespace policy ConfigMap mapping atespaces to the
+  namespaces whose Secrets they may use.
+- **Actor:** a `systemInfo` volume with the `egress-mitm.ate.dev` trust bundle,
+  and `SSL_CERT_FILE` and `SSL_CERT_DIR` pointing at it.
+- **Policy:** an `https` rule with
+  `effects.replaceHeaders: [{header: x-goog-api-key, credentialUri: ate-secret://k8s.io/default/<ns>/<secret>/<key>}]`.
+  The actor sends `x-goog-api-key: placeholder`.
+
+With the sdsmint gateway, every HTTPS connection is intercepted, so an actor
+without the trust bundle can't do TLS. ax-created tasks don't get the bundle
+(ax can't add volumes).
+
 ## Things to know on this version
 
 - Egress is default-deny per actor. Each actor needs an egress policy
