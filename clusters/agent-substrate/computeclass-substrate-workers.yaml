@@ -1,0 +1,38 @@
+# GKE ComputeClass for Substrate workers on agent-substrate.
+#
+# Why: gVisor snapshots only restore on the same CPU feature set, and the
+# default pool's E2 machines mix Intel and AMD hosts. Until now the workers were
+# pinned to one E2 node by hostname, which breaks the moment GKE recreates that
+# node (new name, no labels) and crowded every system pod onto it.
+#
+# This class gives workers their own auto-created nodes:
+# - N4 only: one CPU platform (Intel 5th gen Xeon), so a snapshot taken on any
+#   worker node restores on any other.
+# - nodeLabels stamps ate.dev/substrate-version on every node GKE creates, so
+#   atelet (whose DaemonSet selects on that label) runs on new nodes too; the
+#   v0.4 installer only labels nodes that exist when it runs.
+# - The ate.dev/sandboxClass=gvisor:NoSchedule taint is Substrate's own worker
+#   taint: worker pods and atelet already tolerate it, everything else stays
+#   off. (GKE also taints compute-class nodes for the class itself and adds
+#   the toleration to pods that select the class.)
+# - When upgrading Substrate, change the version label here together with
+#   install.sh's VERSION and the WorkerPool's nodeSelector.
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: substrate-workers
+spec:
+  priorities:
+    - machineFamily: n4
+  nodePoolAutoCreation:
+    enabled: true
+  nodePoolConfig:
+    nodeLabels:
+      ate.dev/substrate-version: v0.4.0
+    taints:
+      - key: ate.dev/sandboxClass
+        value: gvisor
+        effect: NoSchedule
+  activeMigration:
+    optimizeRulePriority: true
+  whenUnsatisfiable: DoNotScaleUp

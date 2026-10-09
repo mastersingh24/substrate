@@ -1,6 +1,6 @@
 # Worker pool used by ax on the agent-substrate cluster.
 #
-# Workers run on nodes from the substrate-workers ComputeClass
+# FALLBACK (hostname pin). Workers run on nodes from the substrate-workers ComputeClass
 # (computeclass-substrate-workers.yaml): N4 only, so gVisor snapshots always
 # restore on the same CPU platform; GKE labels those nodes with
 # ate.dev/substrate-version and taints them for workers only.
@@ -24,5 +24,5 @@ spec:
   workerImage: us-central1-docker.pkg.dev/gke-demos-345619/ax/substrate/ateom-gvisor:v0.4.0@sha256:a85055188241fb4ef6c59d7cd841c8855bc1204ffae5a3c187ba3b24395c13a6
   template:
     nodeSelector:
-      cloud.google.com/compute-class: substrate-workers
+      kubernetes.io/hostname: gke-agent-substrate-default-pool-447e9856-6v23
       ate.dev/substrate-version: v0.4.0

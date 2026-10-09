@@ -164,6 +164,17 @@ WNODE=gke-agent-substrate-default-pool-447e9856-6v23
 
 ## Phase 1: take the worker node out of general scheduling (no downtime)
 
+> **Superseded (2026-10-09): use the `substrate-workers` ComputeClass instead.** Gari chose a GKE ComputeClass for workers (`computeclass-substrate-workers.yaml`): N4-only nodes that GKE creates on demand, labeled `ate.dev/substrate-version` and tainted `ate.dev/sandboxClass=gvisor:NoSchedule` for workers only. `workerpool.yaml` now selects that class instead of the 6v23 hostname, so workers leave the E2 node entirely, which removes its overload without tainting it. Skip the taint below; in Phase 4, apply the ComputeClass **before** `workerpool.yaml`:
+>
+> ```
+> kubectl --context agent-substrate apply -f clusters/agent-substrate/computeclass-substrate-workers.yaml
+> kubectl --context agent-substrate get computeclass substrate-workers   # Health=True
+> kubectl --context agent-substrate apply -f clusters/agent-substrate/workerpool.yaml
+> # GKE creates an N4 node (a few minutes); check it has the version label and taint, atelet runs there, and 4 workers are Ready.
+> ```
+>
+> If the ComputeClass can't be used, fall back to `workerpool-hostname.yaml` plus the taint below.
+
 The worker node runs all four workers plus ate-api-server, atenet-router,
 ax-server, ax-redis, gmp-operator, substrate-scope, kube-dns and two
 konnectivity agents. That is 930m of its 940m CPU requested.
