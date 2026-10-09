@@ -179,6 +179,8 @@ WNODE=gke-agent-substrate-default-pool-447e9856-6v23
 > - GKE taints every class node `cloud.google.com/compute-class=substrate-workers:NoSchedule` as well. `manifests/ate-install/atelet.yaml` now tolerates exactly that class, or atelet never lands on the worker nodes. After changing it, `install.sh deploy atelet` re-renders only the DaemonSet.
 > - Node auto-provisioning refuses a pod that also selects `ate.dev/substrate-version` (`no.scale.up.nap.pod.workload.separation.invalid`), so `workerpool.yaml` selects only the class; the class's `nodeLabels` provide the version label.
 > - N4 can be stocked out in all three us-central1 zones (`scale.up.error.out.of.resources`, then `no.scale.up.nap.capacity.constraints`). With `whenUnsatisfiable: DoNotScaleUp` the workers then stay Pending; use the hostname fallback until capacity returns.
+>
+> **State after the 2026-10-09 install:** N4 was stocked out, so ax-pool runs from `workerpool-hostname.yaml` on 6v23, which carries the Phase 1 taint. The ComputeClass is applied and unused. To move workers onto it later: `kubectl apply -f clusters/agent-substrate/workerpool.yaml`, wait for the N4 node and 4 Ready workers, then remove the 6v23 taint.
 
 The worker node runs all four workers plus ate-api-server, atenet-router,
 ax-server, ax-redis, gmp-operator, substrate-scope, kube-dns and two
@@ -356,7 +358,7 @@ containers:
   - {name: trust, mountPath: /run/ate}
 resources:
   limits:
-  - {name: cpu, quantity: "1"}
+  - {name: cpu, quantity: 500m}   # a worker on an e2-medium offers 940m; "1" never fits ("no worker has room")
   - {name: memory, quantity: 512Mi}
 snapshotConfig:
   onCommit: SNAPSHOT_CONTENT_SCOPE_FULL
@@ -371,11 +373,14 @@ volumes:
 EOF
 $ATE4 --context agent-substrate create actor-template -f /tmp/smoke-template.yaml
 $ATE4 --context agent-substrate create actor c1 -a smoke --template counter
+$ATE4 --context agent-substrate get actor c1 -a smoke              # SUSPENDED: v0.4 creates actors suspended
+$ATE4 --context agent-substrate resume actor c1 -a smoke
 $ATE4 --context agent-substrate get actor c1 -a smoke              # RUNNING
 $ATE4 --context agent-substrate suspend actor c1 -a smoke
 $ATE4 --context agent-substrate get actor c1 -a smoke              # SUSPENDED
 $ATE4 --context agent-substrate resume actor c1 -a smoke
 $ATE4 --context agent-substrate get actor c1 -a smoke              # RUNNING
+$ATE4 --context agent-substrate suspend actor c1 -a smoke         # v0.4 refuses to delete a RUNNING actor
 $ATE4 --context agent-substrate delete actor c1 -a smoke
 ```
 
