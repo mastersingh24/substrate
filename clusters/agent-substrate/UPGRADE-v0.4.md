@@ -174,6 +174,11 @@ WNODE=gke-agent-substrate-default-pool-447e9856-6v23
 > ```
 >
 > If the ComputeClass can't be used, fall back to `workerpool-hostname.yaml` plus the taint below.
+>
+> Found during the 2026-10-09 install:
+> - GKE taints every class node `cloud.google.com/compute-class=substrate-workers:NoSchedule` as well. `manifests/ate-install/atelet.yaml` now tolerates exactly that class, or atelet never lands on the worker nodes. After changing it, `install.sh deploy atelet` re-renders only the DaemonSet.
+> - Node auto-provisioning refuses a pod that also selects `ate.dev/substrate-version` (`no.scale.up.nap.pod.workload.separation.invalid`), so `workerpool.yaml` selects only the class; the class's `nodeLabels` provide the version label.
+> - N4 can be stocked out in all three us-central1 zones (`scale.up.error.out.of.resources`, then `no.scale.up.nap.capacity.constraints`). With `whenUnsatisfiable: DoNotScaleUp` the workers then stay Pending; use the hostname fallback until capacity returns.
 
 The worker node runs all four workers plus ate-api-server, atenet-router,
 ax-server, ax-redis, gmp-operator, substrate-scope, kube-dns and two

@@ -7,6 +7,13 @@
 # (The previous setup pinned every worker to one E2 node by hostname; see
 # workerpool-hostname.yaml if the ComputeClass is unavailable.)
 #
+# The nodeSelector names only the class. GKE's node auto-provisioning rejects
+# a pod that also selects a custom label it has no matching toleration for
+# (no.scale.up.nap.pod.workload.separation.invalid on ate.dev/substrate-version),
+# so the version pin lives in the ComputeClass's nodeLabels instead: every
+# class node carries ate.dev/substrate-version=v0.4.0, which is what atelet's
+# DaemonSet selects on.
+#
 # workerImage is the v0.4.0 ateom-gvisor image, pinned by digest.
 apiVersion: v1
 kind: Namespace
@@ -25,4 +32,3 @@ spec:
   template:
     nodeSelector:
       cloud.google.com/compute-class: substrate-workers
-      ate.dev/substrate-version: v0.4.0

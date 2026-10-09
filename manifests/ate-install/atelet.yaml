@@ -147,6 +147,15 @@ spec:
       - key: ate.dev/sandboxClass
         operator: Exists
         effect: NoSchedule
+      # agent-substrate cluster: GKE also taints every node of a ComputeClass
+      # with cloud.google.com/compute-class=<class>:NoSchedule. Workers run on
+      # the substrate-workers class (clusters/agent-substrate/), so atelet has
+      # to tolerate that class too. Only that one: postgres and atenet-egress
+      # share the n4-preferred nodes, which need no atelet.
+      - key: cloud.google.com/compute-class
+        operator: Equal
+        value: substrate-workers
+        effect: NoSchedule
       containers:
       - name: atelet
         image: ko://github.com/agent-substrate/substrate/cmd/atelet
