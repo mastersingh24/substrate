@@ -1,0 +1,37 @@
+# Egress is default-deny per actor. ax creates a policy per task; for an actor
+# created by hand, apply one after it exists:
+#
+#   kubectl ate --context agent-substrate create egress-policy <actor> -a <atespace> -f egress-policy-example.yaml
+#
+# Field names are unchanged from v0.3.0. What changed on v0.4.0:
+# - The one egress gateway terminates TLS for names an `https` rule lists (so
+#   the actor must trust the egress-mitm.ate.dev bundle) and forwards
+#   `tlsPassthrough` names untouched (the actor needs only public roots).
+#   v0.3.0 accepted tlsPassthrough but ignored it.
+# - `effects.replaceHeaders` on an `https` rule injects a credential from the
+#   bundled k8s.io provider. The provider only serves atespaces granted the
+#   Secret's namespace in ConfigMap ate-system/k8s-credential-provider-namespace-policy.
+# The gateway caches policies for 10s.
+metadata:
+  atespace: cred-test
+  name: default
+rules:
+  # Intercepted, with the Google access token from ate-credentials/google-token
+  # injected; the actor sends `Authorization: placeholder`.
+  - https:
+      hostnames:
+        - aiplatform.googleapis.com
+        - container.googleapis.com
+      ports:
+        numbers: [443]
+      effects:
+        replaceHeaders:
+          - header: Authorization
+            prefix: "Bearer "
+            credentialUri: ate-secret://k8s.io/default/ate-credentials/google-token/token
+  # Not intercepted: the actor does TLS with the origin itself.
+  - tlsPassthrough:
+      hostnames:
+        - github.com
+      ports:
+        numbers: [443]

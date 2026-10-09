@@ -1,0 +1,27 @@
+# Worker pool used by ax on the agent-substrate cluster.
+#
+# gVisor snapshots only restore on the same CPU feature set, and E2 machines mix
+# AMD and Intel hosts, so every worker sits on one node. That node also carries
+# the taint ate.dev/sandboxClass=gvisor:NoSchedule (see UPGRADE-v0.4.md), which
+# keeps everything except workers, atelet and GKE's DaemonSets off it; the
+# controller adds the matching toleration to every gVisor worker pod.
+#
+# workerImage is the v0.4.0 ateom-gvisor image, pinned by digest.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ax-workers
+---
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: ax-pool
+  namespace: ax-workers
+spec:
+  replicas: 4
+  sandboxClass: gvisor
+  workerImage: us-central1-docker.pkg.dev/gke-demos-345619/ax/substrate/ateom-gvisor:v0.4.0@sha256:a85055188241fb4ef6c59d7cd841c8855bc1204ffae5a3c187ba3b24395c13a6
+  template:
+    nodeSelector:
+      kubernetes.io/hostname: gke-agent-substrate-default-pool-447e9856-6v23
+      ate.dev/substrate-version: v0.4.0
