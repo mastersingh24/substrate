@@ -181,6 +181,8 @@ WNODE=gke-agent-substrate-default-pool-447e9856-6v23
 > - N4 can be stocked out in all three us-central1 zones (`scale.up.error.out.of.resources`, then `no.scale.up.nap.capacity.constraints`). With `whenUnsatisfiable: DoNotScaleUp` the workers then stay Pending; use the hostname fallback until capacity returns.
 >
 > **State after the 2026-10-09 install:** N4 was stocked out, so ax-pool runs from `workerpool-hostname.yaml` on 6v23, which carries the Phase 1 taint. The ComputeClass is applied and unused. To move workers onto it later: `kubectl apply -f clusters/agent-substrate/workerpool.yaml`, wait for the N4 node and 4 Ready workers, then remove the 6v23 taint.
+>
+> **2026-10-10: workers moved onto the ComputeClass.** ax-pool now runs from `workerpool.yaml` on an N4 node. Two lessons. (1) Moving workers to another CPU strands every FULL snapshot taken on the old one: 6v23 is AMD EPYC, N4 is Intel, and resumes failed with gVisor's `incompatible FeatureSet: missing features: ...`. Back up `/workspace` and expect to recreate suspended actors. (2) To find out whether N4 is in stock before switching, start a placeholder pod that selects the class and tolerates `ate.dev/sandboxClass=gvisor:NoSchedule`. GKE creates the node, or reports `GCE out of resources` per zone, while the old workers keep serving. Switch the WorkerPool only once the node is Ready.
 
 The worker node runs all four workers plus ate-api-server, atenet-router,
 ax-server, ax-redis, gmp-operator, substrate-scope, kube-dns and two
