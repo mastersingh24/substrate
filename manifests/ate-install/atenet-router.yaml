@@ -197,7 +197,9 @@ spec:
       # defaults) + slack for the force stop and the tracer/meter flush. The
       # sum must fit within terminationGracePeriodSeconds, or the kubelet
       # SIGKILLs mid-drain. None of it scales with --route-timeout, by design.
-      terminationGracePeriodSeconds: 60
+      # agent-substrate: raised to 120 with --parked-request-budget=60s below
+      # (13s + ~15s + 75s derived drain-timeout + slack).
+      terminationGracePeriodSeconds: 120
       containers:
       - name: atenet-router
         image: ko://github.com/agent-substrate/substrate/cmd/atenet
@@ -231,6 +233,11 @@ spec:
         # default (park budget + the drain route budget + margin). The sum
         # of the sequence must fit within terminationGracePeriodSeconds above.
         - "--drain-delay=13s"
+        # agent-substrate: hold a request up to 60s while its actor resumes.
+        # The default 5s budget (Envoy's ext_proc limit is budget + 5s = 10s)
+        # is shorter than a cold resume after a long suspend (~11s seen), so
+        # the first request got a 504 even though the resume succeeded.
+        - "--parked-request-budget=60s"
         # Envoy's end-to-end timeout on the workload route is left at its
         # default of 5m, which suits an agent relaying a model completion: the
         # request stays open for the whole generation. Set --route-timeout
