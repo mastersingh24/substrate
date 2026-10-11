@@ -25,6 +25,10 @@ kind: WorkerPool
 metadata:
   name: ax-pool
   namespace: ax-workers
+  # Mirrored onto every worker, so an actor's worker_selector can target this
+  # pool (hack/ate-selector sets one; snaptest-c4.sh uses it).
+  labels:
+    ate.dev/pool: ax-pool
 spec:
   replicas: 4
   sandboxClass: gvisor

@@ -6,8 +6,13 @@
 # node (new name, no labels) and crowded every system pod onto it.
 #
 # This class gives workers their own auto-created nodes:
-# - N4 only: one CPU platform (Intel 5th gen Xeon), so a snapshot taken on any
-#   worker node restores on any other.
+# - N4 first, C4 as fallback when N4 is out of stock: both run the same CPU
+#   (Intel Xeon Platinum 8581C), so a FULL snapshot taken on either restores on
+#   the other. Tested 2026-10-10/11 both ways with a live mast agent
+#   (v04-migration/snaptest-c4.sh: N4->C4 and C4->N4, mast never restarted).
+#   gVisor refuses a restore when the host lacks any CPU feature recorded in
+#   the snapshot, so never add a family with a different CPU (E2 mixes AMD and
+#   Intel; moving from AMD E2 to N4 stranded every snapshot).
 # - nodeLabels stamps ate.dev/substrate-version on every node GKE creates, so
 #   atelet (whose DaemonSet selects on that label) runs on new nodes too; the
 #   v0.4 installer only labels nodes that exist when it runs.
@@ -24,6 +29,7 @@ metadata:
 spec:
   priorities:
     - machineFamily: n4
+    - machineFamily: c4
   nodePoolAutoCreation:
     enabled: true
   nodePoolConfig:

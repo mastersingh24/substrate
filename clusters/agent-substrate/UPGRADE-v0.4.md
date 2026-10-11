@@ -182,6 +182,8 @@ WNODE=gke-agent-substrate-default-pool-447e9856-6v23
 >
 > **State after the 2026-10-09 install:** N4 was stocked out, so ax-pool runs from `workerpool-hostname.yaml` on 6v23, which carries the Phase 1 taint. The ComputeClass is applied and unused. To move workers onto it later: `kubectl apply -f clusters/agent-substrate/workerpool.yaml`, wait for the N4 node and 4 Ready workers, then remove the 6v23 taint.
 >
+> **2026-10-11: C4 is the class's fallback.** N4 and C4 share the Xeon 8581C. A live mast agent was suspended and resumed N4→C4 and C4→N4 without restarting (`v04-migration/snaptest-c4.sh`, a temporary manual `c4-snaptest` pool, since GKE Warden won't combine a custom ComputeClass with a machine-family selector). Both N4 and C4 have run out of stock in single zones (N4 in c on 10-10; C4 in c on 10-10); the class tries every zone.
+>
 > **2026-10-10: workers moved onto the ComputeClass.** ax-pool now runs from `workerpool.yaml` on an N4 node. Two lessons. (1) Moving workers to another CPU strands every FULL snapshot taken on the old one: 6v23 is AMD EPYC, N4 is Intel, and resumes failed with gVisor's `incompatible FeatureSet: missing features: ...`. Back up `/workspace` and expect to recreate suspended actors. (2) To find out whether N4 is in stock before switching, start a placeholder pod that selects the class and tolerates `ate.dev/sandboxClass=gvisor:NoSchedule`. GKE creates the node, or reports `GCE out of resources` per zone, while the old workers keep serving. Switch the WorkerPool only once the node is Ready.
 
 The worker node runs all four workers plus ate-api-server, atenet-router,
