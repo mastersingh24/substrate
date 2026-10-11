@@ -49,7 +49,7 @@ IAM.
 | #2049 `system-roots.ate.dev`, #2048 multiple bundle names | ax | `TrustBundleDataSource.name` (field 1) is reserved and replaced by `names`. **A v0.3 ax-server's trust bundle name is silently dropped**, so ax-server must be rebuilt against v0.4.0 with `names: [egress-mitm.ate.dev, system-roots.ate.dev]` (Phase 5) |
 | #2219 WorkerPool `serviceAccountName` | No | Optional. ax-pool keeps the namespace's `default` ServiceAccount |
 | #1965, #1980 authz (OpenFGA) | No | Off unless `--experimental-enable-authz`. OpenFGA tables are created in Postgres regardless |
-| #2105 `onResume` removal, #2309 `onPause` removal | ax | A template that sets them is rejected over JSON. Over gRPC the fields are unknown and dropped. The ax v0.4 port sets only `onCommit` |
+| #2105 `onResume` removal, #2309 `onPause` removal | ax | A template that sets them is rejected, over JSON and over gRPC alike (v0.4 rejects unknown proto fields: `internal/ateinterceptors/rejectunknown.go`, the error google/ax#443 shows). The ax v0.4 port sets only `onCommit` |
 | #2193 actor events | No | Telemetry plumbing only |
 | Worker/API proto changes (`worker_pod_ips`, `RegisterWorker`, `HardwareIdentity`) | substrate-scope | Wire-compatible for reads (a string field became a repeated string field). Rebuild substrate-scope against v0.4.0 when convenient |
 
