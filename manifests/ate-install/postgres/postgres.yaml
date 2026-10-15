@@ -102,6 +102,12 @@ spec:
       labels:
         app: postgres
     spec:
+      # agent-substrate cluster: the default pool's e2-medium nodes cannot fit
+      # postgres's 2 CPU request; let the n4-preferred compute class provision
+      # a node for it. (The data volume's StorageClass is set by install.sh via
+      # ATE_API_POSTGRES_STORAGE_CLASS=dynamic-rwo, no longer patched here.)
+      nodeSelector:
+        cloud.google.com/compute-class: n4-preferred
       securityContext:
         # Group ownership of the projected certificate below, and of the data
         # volume so that a freshly provisioned one is writable. OnRootMismatch

@@ -141,6 +141,27 @@ spec:
       - key: ate.dev/sandboxClass
         operator: Exists
         effect: NoSchedule
+      # agent-substrate cluster: GKE also taints every node of a ComputeClass
+      # with cloud.google.com/compute-class=<class>:NoSchedule. Workers run on
+      # the substrate-workers class (clusters/agent-substrate/), so atelet has
+      # to tolerate that class too. Only that one: postgres and atenet-egress
+      # share the n4-preferred nodes, which need no atelet.
+      - key: cloud.google.com/compute-class
+        operator: Equal
+        value: substrate-workers
+        effect: NoSchedule
+      # agent-substrate cluster: v0.5 runs atelet on every node it tolerates
+      # (no version-label nodeSelector any more), which would put it, and its
+      # new objectstore-plugin sidecar (100m/256Mi together, at
+      # ate-node-critical priority), on the crowded default-pool e2-medium
+      # nodes where no worker ever runs. Pin it to worker nodes. The
+      # substrate-workers ComputeClass stamps this neutral label through
+      # nodePoolConfig.nodeLabels (clusters/agent-substrate/
+      # computeclass-substrate-workers.yaml); selecting the GKE-managed
+      # cloud.google.com/compute-class label from a DaemonSet directly is
+      # avoided because it is unverified on GKE.
+      nodeSelector:
+        ate.dev/worker-node: "true"
       # The node object-store plugin moves external snapshots between this
       # node and object storage and fetches sandbox assets for atelet, over a
       # Unix socket in a pod-local emptyDir.
