@@ -1,0 +1,42 @@
+# Egress is default-deny per actor. ax creates a policy per task; for an actor
+# created by hand, apply one after it exists:
+#
+#   kubectl ate --context agent-substrate create egress-policy <actor> -a <atespace> -f egress-policy-example.yaml
+#
+# Field names are unchanged from v0.4.0. What changed on v0.5.0:
+# - DNS inside the actor resolves only hostnames some rule here lists
+#   (wildcards included); every other name gets REFUSED (#2524). Policy
+#   changes reach DNS within ~5s. List every host the actor resolves.
+# - A credential header can also be an `actorJwt` the gateway mints (instead
+#   of `credentialUri`); exactly one of the two per header.
+# - Outbound WebSocket upgrades are refused (#1634); link-local addresses
+#   (169.254.0.0/16, e.g. the metadata server) are rejected in the sandbox.
+# As on v0.4: `https` rules are TLS-intercepted (the actor must trust the
+# egress-mitm.ate.dev bundle), `tlsPassthrough` names are forwarded untouched,
+# and `credentialUri: ate-secret://k8s.io/...` needs the actor's atespace
+# granted the Secret's namespace in ConfigMap
+# ate-system/k8s-credential-provider-namespace-policy.
+# The gateway caches policies for 10s.
+metadata:
+  atespace: cred-test
+  name: default
+rules:
+  # Intercepted, with the Google access token from ate-credentials/google-token
+  # injected; the actor sends `Authorization: placeholder`.
+  - https:
+      hostnames:
+        - aiplatform.googleapis.com
+        - container.googleapis.com
+      ports:
+        numbers: [443]
+      effects:
+        replaceHeaders:
+          - header: Authorization
+            prefix: "Bearer "
+            credentialUri: ate-secret://k8s.io/default/ate-credentials/google-token/token
+  # Not intercepted: the actor does TLS with the origin itself.
+  - tlsPassthrough:
+      hostnames:
+        - github.com
+      ports:
+        numbers: [443]

@@ -1,0 +1,64 @@
+# Worker pool used by ax on the agent-substrate cluster (Substrate v0.5.0).
+#
+# Workers run on nodes from the substrate-workers ComputeClass
+# (computeclass-substrate-workers.yaml): N4 first, C4 as fallback (same CPU),
+# so gVisor snapshots restore on the same CPU platform. GKE taints those
+# nodes for workers only and labels them ate.dev/worker-node=true, which is
+# what atelet's DaemonSet selects on. (See workerpool-hostname.yaml if the
+# ComputeClass is unavailable.)
+#
+# The nodeSelector names only the class. GKE's node auto-provisioning rejects
+# a pod that also selects a custom label it has no matching toleration for
+# (no.scale.up.nap.pod.workload.separation.invalid), so it must not select
+# ate.dev/worker-node.
+#
+# v0.5: spec.sandboxClass was replaced by spec.sandboxClasses (exactly one
+# entry, names immutable). Without configRef the pool follows the class
+# default SandboxConfig (gvisor-default, annotated
+# sandboxconfig.ate.dev/is-class-default by ate-setup).
+#
+# Resources: a worker advertises its pod's *limits* as its capacity (downward
+# API, internal/ateom/register.go); without limits each of the 4 workers
+# advertised the whole node. Sized so all 4 fit on one n4-highcpu-2
+# (allocatable 1930m / ~2.7Gi; GKE daemons request ~490m / ~0.9Gi and the v0.5
+# atelet + objectstore-plugin 100m / 256Mi, leaving ~1340m / ~1.6Gi):
+#   requests 300m / 384Mi x4 = 1200m / 1536Mi  (scheduling)
+#   limits   500m / 1Gi                         (advertised capacity, and the
+#                                                cgroup cap for every actor
+#                                                the worker hosts)
+# Actors without resource limits (lookout's tasks) still cost 0 against
+# capacity, but now share a 1Gi memory cgroup per worker, and v0.5 durable
+# dirs are gVisor tmpfs that count against it. Re-tune after the smoke tests
+# (UPGRADE-v0.5.md, test g and "worker capacity").
+#
+# workerImage is the v0.5.0 ateom-gvisor image built by
+# `ate-setup publish release-images`, pinned by digest.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ax-workers
+---
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: ax-pool
+  namespace: ax-workers
+  # Mirrored onto every worker, so an actor's worker_selector can target this
+  # pool (hack/ate-selector sets one; snaptest-c4.sh uses it).
+  labels:
+    ate.dev/pool: ax-pool
+spec:
+  replicas: 4
+  sandboxClasses:
+  - name: gvisor
+  workerImage: us-central1-docker.pkg.dev/gke-demos-345619/ax/substrate/ateom-gvisor:v0.5.0@sha256:a5d048d94695043d09c1439c40a5faac2691b9b9aa2a0f978b57b8b49825078a
+  template:
+    nodeSelector:
+      cloud.google.com/compute-class: substrate-workers
+    resources:
+      requests:
+        cpu: 300m
+        memory: 384Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi

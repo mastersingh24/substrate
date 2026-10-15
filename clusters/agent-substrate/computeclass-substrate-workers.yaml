@@ -1,0 +1,51 @@
+# GKE ComputeClass for Substrate workers on agent-substrate.
+#
+# Why: gVisor snapshots only restore on the same CPU feature set, and the
+# default pool's E2 machines mix Intel and AMD hosts. Until now the workers were
+# pinned to one E2 node by hostname, which breaks the moment GKE recreates that
+# node (new name, no labels) and crowded every system pod onto it.
+#
+# This class gives workers their own auto-created nodes:
+# - N4 first, C4 as fallback when N4 is out of stock: both run the same CPU
+#   (Intel Xeon Platinum 8581C), so a FULL snapshot taken on either restores on
+#   the other. Tested 2026-10-10/11 both ways with a live mast agent
+#   (v04-migration/snaptest-c4.sh: N4->C4 and C4->N4, mast never restarted).
+#   gVisor refuses a restore when the host lacks any CPU feature recorded in
+#   the snapshot, so never add a family with a different CPU (E2 mixes AMD and
+#   Intel; moving from AMD E2 to N4 stranded every snapshot).
+# - nodeLabels stamps ate.dev/worker-node=true on every node GKE creates for
+#   this class. atelet's DaemonSet selects on it (manifests/ate-install/
+#   atelet.yaml, agent-substrate patch), so atelet runs on every worker node,
+#   including ones added later, and stays off the default-pool e2-medium nodes.
+#   v0.5 has no ate.dev/substrate-version label any more (#1812). A neutral
+#   label is used instead of selecting cloud.google.com/compute-class from the
+#   DaemonSet, which is unverified on GKE. The WorkerPool does NOT select this
+#   label: NAP rejects pods that select a custom label without a matching
+#   toleration (no.scale.up.nap.pod.workload.separation.invalid).
+# - The ate.dev/sandboxClass=gvisor:NoSchedule taint is Substrate's own worker
+#   taint: worker pods and atelet already tolerate it, everything else stays
+#   off. (GKE also taints compute-class nodes for the class itself and adds
+#   the toleration to pods that select the class.)
+# - Unverified: whether changing nodePoolConfig on the live class relabels
+#   nodes in pools it already created. Label existing nodes by hand
+#   (UPGRADE-v0.5.md, Phase 4).
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: substrate-workers
+spec:
+  priorities:
+    - machineFamily: n4
+    - machineFamily: c4
+  nodePoolAutoCreation:
+    enabled: true
+  nodePoolConfig:
+    nodeLabels:
+      ate.dev/worker-node: "true"
+    taints:
+      - key: ate.dev/sandboxClass
+        value: gvisor
+        effect: NoSchedule
+  activeMigration:
+    optimizeRulePriority: true
+  whenUnsatisfiable: DoNotScaleUp

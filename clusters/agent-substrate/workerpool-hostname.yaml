@@ -1,0 +1,36 @@
+# Worker pool used by ax on the agent-substrate cluster (Substrate v0.5.0).
+#
+# FALLBACK (hostname pin), for when the substrate-workers ComputeClass
+# (computeclass-substrate-workers.yaml, the normal setup; see workerpool.yaml)
+# is unavailable: pins every worker to one existing node by hostname. Pick a
+# node, and remember gVisor snapshots only restore on the same CPU platform,
+# so keep the pool on one machine family.
+#
+# atelet only runs on nodes labeled ate.dev/worker-node=true (agent-substrate
+# patch to manifests/ate-install/atelet.yaml), so label the node first:
+#   kubectl --context agent-substrate label node NODE ate.dev/worker-node=true
+# A default-pool node also carries no ate.dev/sandboxClass taint, so other
+# pods may share it.
+#
+# workerImage is the v0.5.0 ateom-gvisor image, pinned by digest.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ax-workers
+---
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: ax-pool
+  namespace: ax-workers
+  labels:
+    ate.dev/pool: ax-pool
+spec:
+  replicas: 4
+  sandboxClasses:
+  - name: gvisor
+  workerImage: us-central1-docker.pkg.dev/gke-demos-345619/ax/substrate/ateom-gvisor:v0.5.0@sha256:a5d048d94695043d09c1439c40a5faac2691b9b9aa2a0f978b57b8b49825078a
+  template:
+    nodeSelector:
+      kubernetes.io/hostname: gke-agent-substrate-default-pool-447e9856-6v23
+      ate.dev/worker-node: "true"
