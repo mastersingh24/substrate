@@ -38,10 +38,17 @@ spec:
   # node, atelet's objectstore-plugin sidecar spiked to ~1 GiB during a burst of
   # simultaneous suspends (agent-substrate/substrate#2553) and took the node to
   # 88% memory with memory requests at 97%.
+  #
+  # C4 first, N4 only as a fallback. gVisor pins an agent to the CPU features of
+  # the host it first booted on (agent-substrate/substrate#1657): C4 reports
+  # `monitor` and N4 (the same Xeon 8581C) doesn't, so agents born on C4 can't
+  # run on N4, while agents born on N4 run on either. With C4 first, every agent
+  # can run on the normal home; during an N4 fallback only C4-born agents are
+  # unavailable, until C4 returns. (N4 first would strand C4-born agents for good.)
   priorities:
-    - machineFamily: n4
-      minMemoryGb: 7
     - machineFamily: c4
+      minMemoryGb: 7
+    - machineFamily: n4
       minMemoryGb: 7
   nodePoolAutoCreation:
     enabled: true
