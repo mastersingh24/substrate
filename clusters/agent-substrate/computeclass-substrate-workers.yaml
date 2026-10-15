@@ -34,9 +34,15 @@ kind: ComputeClass
 metadata:
   name: substrate-workers
 spec:
+  # At least 7 GB per node (n4-standard-2 / c4-standard-2). On a 4 GB highcpu-2
+  # node, atelet's objectstore-plugin sidecar spiked to ~1 GiB during a burst of
+  # simultaneous suspends (agent-substrate/substrate#2553) and took the node to
+  # 88% memory with memory requests at 97%.
   priorities:
     - machineFamily: n4
+      minMemoryGb: 7
     - machineFamily: c4
+      minMemoryGb: 7
   nodePoolAutoCreation:
     enabled: true
   nodePoolConfig:
